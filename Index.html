@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<!--  XP-Farming Ledger  ·  v-7  ·  toggle fill checkboxes -->
+<html lang="en"><meta charset="UTF-8" />
+<title>XP-Farming Ledger</title>
+
+<!-- Styles omitted for brevity, same as previous -->
+
+<style>
+:root{ --bg:#101321; --card:#1b1e2e; --accent:#01bfa6; --text:#f1f1f1; --text2:#bdbdbd;
+       --pos:#043c33; --neg:#3b2700 }
+*{box-sizing:border-box;margin:0}
+body{font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text);
+     padding:28px;line-height:1.45}
+h1{font-size:1.8rem;margin-bottom:18px}
+.card{background:var(--card);border-radius:8px;padding:20px;box-shadow:0 4px 14px rgba(0,0,0,.4);
+      margin-bottom:22px}
+details summary{cursor:pointer;font-weight:600}
+details[open] summary{margin-bottom:12px}
+label{display:inline-block;margin-right:20px;margin-bottom:10px;color:var(--text2)}
+input[type=number],input[type=password]{
+  background:#111420;border:1px solid #333;border-radius:4px;color:var(--text);
+  padding:4px 6px;width:130px}
+button{background:var(--accent);border:none;border-radius:5px;color:#000;font-weight:600;
+       cursor:pointer;padding:6px 16px;margin-top:8px;letter-spacing:.3px}
+button:disabled{opacity:.35;cursor:default}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th{font-weight:600;color:var(--text2);padding:6px 4px} td{padding:6px 4px;text-align:center}
+tbody tr:nth-child(even){background:#202231}
+tbody tr.pos{background:var(--pos)} tbody tr.neg{background:var(--neg)}
+tbody tr.zero{background:#202231} tbody tr:hover{background:#2c2f44}
+td.price{cursor:pointer;color:var(--accent)} td.price:hover{background:#264e49}
+#status{font-style:italic;margin:10px 2px}
+nav.tabbar{display:flex;gap:6px;margin-bottom:8px}
+nav.tabbar button{background:#202335;padding:6px 14px;color:var(--text2);
+                  border-radius:5px;border:none;cursor:pointer}
+nav.tabbar button.active{background:var(--accent);color:#000}
+.stats ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px 16px}
+.stats li{color:var(--text2)} .stats strong{color:var(--text)}
+#summaryData {
+  background:#222; padding:10px; border-radius:8px; margin-top:20px; font-family:monospace; white-space: pre-wrap;
+}
+#autoTooltip {
+  display:none; position:absolute; background:#333; color:#fff; padding:8px; border-radius:4px; max-width:250px; z-index:1000;
+}
+</style>
+
+<body>
+<h1>XP-Farming Ledger</h1>
+
+<!-- SETTINGS -->
+<details id="cfgBox" class="card" open>
+  <summary>⚙  Settings</summary>
+  <label>API key
+    <input id="myKey" type="password" size="46" />
+  </label>
+  <label>Default $ / loss
+    <input id="price" type="number" step="10000" min="0" value="150000" />
+  </label>
+  <button id="saveCfg">Save & Refresh</button>
+</details>
+
+<!-- STATISTICS -->
+<section class="card stats">
+  <h2 style="margin-bottom:12px">Statistics</h2>
+  <ul>
+    <li>Total bought losses <strong id="stLoss">0</strong></li>
+    <li>Total owed <strong id="stOwed">$0</strong></li>
+    <li>
+      Auto-paid <strong id="stAuto">$0</strong> 
+      <span id="autoInfoIcon" style="cursor:pointer; margin-left:4px;">ℹ️</span>
+    </li>
+    <li>Manually paid <strong id="stMan">$0</strong></li>
+    <li>Outstanding <strong id="stOut">$0</strong></li>
+  </ul>
+</section>
+
+<!-- Tooltip -->
+<div id="autoTooltip">This will check for payments you made then mark as paid.</div>
+
+<!-- Summary Data -->
+<div id="summaryData">Loading summary data...</div>
+
+<!-- Buttons -->
+<button id="btnPaid" style="margin-top:14px">Mark selected as PAID</button>
+<p id="status"></p>
+
+<!-- Tabs -->
+<nav class="tabbar">
+  <button id="tabOut" class="active">Outstanding</button>
+  <button id="tabPaid">Paid</button>
+</nav>
+
+<!-- Tables -->
+<div id="tables" class="card" style="padding:0">
+  <table id="tblOut"><thead>
+    <tr><th>✓</th><th>Attacker</th><th>Loses</th><th>Price</th>
+        <th>Owes</th><th>Paid</th><th>Balance</th></tr>
+  </thead><tbody></tbody></table>
+  <table id="tblPaid" style="display:none"><thead>
+    <tr><th></th><th>Attacker</th><th>Loses</th><th>Price</th>
+        <th>Owes</th><th>Paid</th><th>Balance</th></tr>
+  </thead><tbody></tbody></table>
+</div>
+
+<script>
+/* ---------- helpers & storage ---------- */
+const $=id=>document.getElementById(id);
+const els={
+ myKey:$('myKey'),price:$('price'),save:$('saveCfg'),cfgBox:$('cfgBox'),
+ stat:$('status'),outBody:$('tblOut').querySelector('tbody'),
+ paidBody:$('tblPaid').querySelector('tbody'),btnPaid:$('btnPaid'),
+ tabOut:$('tabOut'),tabPaid:$('tabPaid'),
+ stLoss:$('stLoss'),stOwed:$('stOwed'),stAuto:$('stAuto'),
+ stMan:$('stMan'),stOut:$('stOut'), summaryDiv:$('summaryData'),
+ autoTooltip:$('autoTooltip'), autoInfoIcon:$('autoInfoIcon')
+};
+const j=(k,v)=>v===undefined?JSON.parse(localStorage.getItem(k)||'{}')
+                             :localStorage.setItem(k,JSON.stringify(v));
+const CFG='xplCfg',PAY='xplPay',PRC='xplPrices';
+const money=n=>'$'+n.toLocaleString('en-US');
+
+/* ---------- Torn API ---------- */
+async function api(path){const r=await fetch(path);const j=await r.json();
+                         if(j.error)throw j.error.error; return j;}
+async function resolveId(key){
+  const d=await api(`https://api.torn.com/user/?selections=basic&key=${key}`);return d.player_id}
+async function getAttacks(id,key){
+  const d=await api(`https://api.torn.com/user/${id}?selections=attacks&key=${key}`);
+  return Object.values(d.attacks||{})}
+async function getEvents(id,key){
+  const d=await api(`https://api.torn.com/user/${id}?selections=events&key=${key}`);
+  return Object.values(d.events||{})}
+
+/* ---------- auto-payment extractor ---------- */
+function scanAutoPayments(events){
+  const map={};
+  events.forEach(e=>{
+    if(!e.initiator_id)return;
+    const cash=  e.data?.cash   || e.data?.amount || (/\$([\d,]+)/.exec(e.event||e.title||'')||[])[1];
+    if(!cash)return;
+    const val=+String(cash).replace(/[, ]/g,'');
+    if(val>0) map[e.initiator_id]=(map[e.initiator_id]||0)+val;
+  });
+  return map;
+}
+
+/* ---------- build data model ---------- */
+async function build(){
+  const cfg=j(CFG);
+  if(!cfg.key){els.stat.textContent='Enter API key.';return{rows:[]}}
+
+  if(!cfg.id){els.stat.textContent='Resolving player ID…';
+              cfg.id=await resolveId(cfg.key);j(CFG,cfg)}
+
+  els.stat.textContent='Fetching attack log & events…';
+  const [attacks,events]=await Promise.all([
+      getAttacks(cfg.id,cfg.key), getEvents(cfg.id,cfg.key)]);
+
+  const g={}, defP=cfg.price||0, price=j(PRC);
+  attacks.forEach(a=>{
+    if(a.defender_id==cfg.id && a.result==='Lost')
+      (g[a.attacker_id]??={id:a.attacker_id,name:a.attacker_name,losses:0}).losses++});
+  const auto=scanAutoPayments(events);
+  const manual=j(PAY);
+
+  const rows=Object.values(g).map(r=>{
+    r.price = price[r.id]??defP;
+    r.owes  = r.losses*r.price;
+    r.pAuto = auto[r.id]||0;
+    r.pMan  = manual[r.id]||0;
+    r.paid  = r.pAuto+r.pMan;
+    r.balance=r.owes-r.paid;
+    return r;
+  }).sort((a,b)=>b.balance-a.balance);
+
+  // Calculate totals with safe defaults
+  const totalLosses = rows.length > 0 ? rows.reduce((s, r) => s + r.losses, 0) : 0;
+  const totalOwed = rows.length > 0 ? rows.reduce((s, r) => s + r.owes, 0) : 0;
+  const totalAuto = rows.length > 0 ? rows.reduce((s, r) => s + r.pAuto, 0) : 0;
+  const totalMan = rows.length > 0 ? rows.reduce((s, r) => s + r.pMan, 0) : 0;
+  const totalOut = totalOwed - totalAuto - totalMan;
+
+  // Create summary string
+  const summaryText = `
+--- Summary Stats ---
+Total Losses Sold: ${totalLosses}
+Total Owed: ${money(totalOwed)}
+Total Auto-paid: ${money(totalAuto)}
+Total Manual Paid: ${money(totalMan)}
+Total Outstanding: ${money(totalOut)}
+---------------------
+`;
+  els.summaryDiv.textContent=summaryText;
+
+  // Set tooltip position when clicking info icon
+  els.autoInfoIcon.onclick=()=>{
+    const rect=els.autoInfoIcon.getBoundingClientRect();
+    els.autoTooltip.style.top=(rect.bottom+window.scrollY+5)+'px';
+    els.autoTooltip.style.left=(rect.left+window.scrollX)+'px';
+    els.autoTooltip.style.display='block';
+  };
+  document.addEventListener('click', (e) => {
+    if(e.target !== els.autoInfoIcon && !els.autoTooltip.contains(e.target)){
+      els.autoTooltip.style.display='none';
+    }
+  });
+
+  els.stat.textContent=`Attacks ${attacks.length}, events ${events.length}, players ${rows.length}`;
+  return {rows, stats:{losses: totalLosses, owes: totalOwed, auto: totalAuto, man: totalMan, out: totalOut}};
+}
+
+/* ---------- render ---------- */
+function render({rows,stats}){
+  els.outBody.innerHTML=els.paidBody.innerHTML='';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.className=r.balance>0?'pos':(r.balance<0?'neg':'zero');
+    tr.innerHTML=`<td>${r.balance>0?'<input type="checkbox" data-id="'+r.id+'">':''}</td>
+      <td>${r.name}</td><td>${r.losses}</td>
+      <td class="price" data-id="${r.id}">${money(r.price)}</td>
+      <td>${money(r.owes)}</td><td>${money(r.paid)}</td><td>${money(r.balance)}</td>`;
+    (r.balance>0?els.outBody:els.paidBody).appendChild(tr);
+  });
+  // update stats
+  els.stLoss.textContent=stats.losses.toLocaleString();
+  els.stOwed.textContent=money(stats.owes);
+  els.stAuto.textContent=money(stats.auto);
+  els.stMan.textContent=money(stats.man);
+  els.stOut.textContent=money(stats.out);
+}
+
+// ---------- toggle fill all checkboxes ---------- //
+let fillAllFlag = false;
+
+// ---------- modified button handler ---------- //
+els.btnPaid.onclick=()=>{
+  const store=j(PAY);
+  if(fillAllFlag){
+    // Fill all checkboxes
+    document.querySelectorAll('#tblOut tbody input[type=checkbox]').forEach(cb => {
+      cb.checked = true;
+    });
+    // Do NOT reset toggle, so next click will mark checked boxes
+  } else {
+    // Mark only checked checkboxes
+    document.querySelectorAll('#tblOut tbody input[type=checkbox]:checked').forEach(cb => {
+      const id = cb.dataset.id;
+      const bal = +cb.closest('tr').lastElementChild.textContent.replace(/[^\d-]/g,'');
+      store[id] = (store[id] || 0) + bal;
+    });
+    // Reset toggle so next click will fill all
+    fillAllFlag = false;
+  }
+  j(PAY, store);
+  refresh();
+};
+
+/* ---------- existing code ---------- */
+els.save.onclick=()=>{j(CFG,{key:els.myKey.value.trim(),price:+els.price.value});
+                      els.cfgBox.removeAttribute('open'); refresh();};
+[els.outBody,els.paidBody].forEach(tb=>tb.addEventListener('click',e=>{
+  if(!e.target.classList.contains('price'))return;
+  const id=e.target.dataset.id,current=+e.target.textContent.replace(/[^\d]/g,'');
+  const val=prompt('New price per loss:',current);
+  if(val===null)return; const num=+val;
+  if(isNaN(num)||num<0){alert('Invalid number');return;}
+  const map=j(PRC); map[id]=num; j(PRC,map); refresh();
+}));
+els.tabOut.onclick=()=>switchTab(true); els.tabPaid.onclick=()=>switchTab(false);
+function switchTab(out){els.tabOut.classList.toggle('active',out);
+  els.tabPaid.classList.toggle('active',!out);
+  $('tblOut').style.display=out?'':'none';
+  $('tblPaid').style.display=out?'none':'';}
+(async()=>{const cfg=j(CFG); if(cfg.key)els.myKey.value=cfg.key; if(cfg.price)els.price.value=cfg.price; if(cfg.key)els.cfgBox.removeAttribute('open'); refresh();})();
+async function refresh(){try{render(await build())}catch(e){els.stat.textContent='Error: '+e;console.error(e)}} 
+</script>
+</body>
+</html>
