@@ -80,7 +80,7 @@ nav.tabbar button.active{background:var(--accent);color:#000}
 <div id="summaryData">Loading summary data...</div>
 
 <!-- Buttons -->
-<button id="btnPaid" style="margin-top:14px">Mark selected as PAID</button>
+<button id="btnPaid" style="margin-top:14px">Fill all as PAID</button>
 <p id="status"></p>
 
 <!-- Tabs -->
@@ -172,7 +172,7 @@ async function build(){
     return r;
   }).sort((a,b)=>b.balance-a.balance);
 
-  // Calculate totals with safe defaults
+  // Calculate totals
   const totalLosses = rows.length > 0 ? rows.reduce((s, r) => s + r.losses, 0) : 0;
   const totalOwed = rows.length > 0 ? rows.reduce((s, r) => s + r.owes, 0) : 0;
   const totalAuto = rows.length > 0 ? rows.reduce((s, r) => s + r.pAuto, 0) : 0;
@@ -191,7 +191,7 @@ Total Outstanding: ${money(totalOut)}
 `;
   els.summaryDiv.textContent=summaryText;
 
-  // Set tooltip position when clicking info icon
+  // Tooltip handling
   els.autoInfoIcon.onclick=()=>{
     const rect=els.autoInfoIcon.getBoundingClientRect();
     els.autoTooltip.style.top=(rect.bottom+window.scrollY+5)+'px';
@@ -210,30 +210,47 @@ Total Outstanding: ${money(totalOut)}
 
 /* ---------- render ---------- */
 function render({rows,stats}){
-  // Clear previous table content
+  // Clear previous content
   els.outBody.innerHTML=els.paidBody.innerHTML='';
 
   // Get stored checked IDs
-  const checkedIds = Object.keys(j(PAY));
+  const store = j(PAY);
 
   rows.forEach(r => {
     const tr = document.createElement('tr');
     tr.className = r.balance > 0 ? 'pos' : (r.balance < 0 ? 'neg' : 'zero');
 
-    // Build checkbox html, checked if in stored data
-    const isChecked = checkedIds.includes(r.id);
+    // determine if checkbox should be checked
+    const isChecked = store[r.id] === true;
     const checkboxHtml = `<input type="checkbox" data-id="${r.id}" ${isChecked ? 'checked' : ''}>`;
 
     tr.innerHTML = `<td>${r.balance>0 ? checkboxHtml : ''}</td>
-      <td>${r.name}</td><td>${r.losses}</td>
+      <td>${r.name}</td>
+      <td>${r.losses}</td>
       <td class="price" data-id="${r.id}">${money(r.price)}</td>
-      <td>${money(r.owes)}</td><td>${money(r.paid)}</td><td>${money(r.balance)}</td>`;
+      <td>${money(r.owes)}</td>
+      <td>${money(r.paid)}</td>
+      <td>${money(r.balance)}</td>`;
 
-    // Append row to appropriate table
+    // Append row to table
     (r.balance > 0 ? els.outBody : els.paidBody).appendChild(tr);
-  });
 
-  // Update stats
+    // Add event listener to checkbox to update store
+    const checkbox = tr.querySelector('input[type=checkbox]');
+    if(checkbox){
+      checkbox.addEventListener('change', () => {
+        const id = checkbox.dataset.id;
+        const store = j(PAY);
+        if(checkbox.checked){
+          store[id] = true;
+        } else {
+          delete store[id];
+        }
+        j(PAY, store);
+      });
+    }
+  });
+  // update stats
   els.stLoss.textContent=stats.losses.toLocaleString();
   els.stOwed.textContent=money(stats.owes);
   els.stAuto.textContent=money(stats.auto);
@@ -241,39 +258,42 @@ function render({rows,stats}){
   els.stOut.textContent=money(stats.out);
 }
 
-// Declare the toggle flag outside the handler
-let fillAllFlag = false;
+// Declare mode toggle flag outside
+let fillAllFlag=false;
 
-// ---------- modified button handler ---------- //
-els.btnPaid.onclick=()=>{
+/* ---------- toggle button handler ---------- */
+els.btnPaid.onclick = () => {
   const store = j(PAY);
-  if(!fillAllFlag){
-    // Set flag to true and check all checkboxes
+  if (!fillAllFlag) {
+    // Fill all checkboxes
     fillAllFlag=true;
     document.querySelectorAll('#tblOut tbody input[type=checkbox]').forEach(cb => {
-      cb.checked = true;
+      cb.checked=true;
     });
   } else {
-    // Reset flag and process checked checkboxes
+    // Save only checked checkboxes
     fillAllFlag=false;
     document.querySelectorAll('#tblOut tbody input[type=checkbox]:checked').forEach(cb => {
       const id=cb.dataset.id;
-      const bal=+cb.closest('tr').lastElementChild.textContent.replace(/[^\d-]/g,'');
-      store[id] = (store[id] || 0) + bal;
+      store[id]=true;
     });
   }
-  j(PAY, store);
+  // Update button appearance and text
+  els.btnPaid.classList.toggle('active-fill-all', fillAllFlag);
+  els.btnPaid.textContent = fillAllFlag ? 'Mark selected as PAID' : 'Fill all as PAID';
+
+  j(PAY,store);
   refresh();
 };
 
-// ---------- existing code for save button ----------
+/* ---------- save config ---------- */
 els.save.onclick=()=>{
   j(CFG,{key:els.myKey.value.trim(),price:+els.price.value});
   els.cfgBox.removeAttribute('open');
   refresh();
 };
 
-// Existing code for table cell editing
+// Table cell editing
 [els.outBody,els.paidBody].forEach(tb=>tb.addEventListener('click',e=>{
   if(!e.target.classList.contains('price'))return;
   const id=e.target.dataset.id;
@@ -289,7 +309,7 @@ els.save.onclick=()=>{
 }));
 
 // Tab switching
-els.tabOut.onclick=()=>switchTab(true); 
+els.tabOut.onclick=()=>switchTab(true);
 els.tabPaid.onclick=()=>switchTab(false);
 function switchTab(out){
   els.tabOut.classList.toggle('active',out);
@@ -298,7 +318,7 @@ function switchTab(out){
   $('tblPaid').style.display=out?'none':'';
 }
 
-// Initialize on load
+// Initialize
 (async()=>{
   const cfg=j(CFG);
   if(cfg.key)els.myKey.value=cfg.key;
@@ -306,6 +326,7 @@ function switchTab(out){
   if(cfg.key)els.cfgBox.removeAttribute('open');
   await refresh();
 })();
+
 async function refresh(){
   try{
     render(await build());
@@ -315,5 +336,4 @@ async function refresh(){
   }
 }
 </script>
-</body>
-                                                         </html>
+</body></html>
