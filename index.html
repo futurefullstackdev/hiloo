@@ -210,17 +210,30 @@ Total Outstanding: ${money(totalOut)}
 
 /* ---------- render ---------- */
 function render({rows,stats}){
+  // Clear previous table content
   els.outBody.innerHTML=els.paidBody.innerHTML='';
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    tr.className=r.balance>0?'pos':(r.balance<0?'neg':'zero');
-    tr.innerHTML=`<td>${r.balance>0?'<input type="checkbox" data-id="'+r.id+'">':''}</td>
+
+  // Get stored checked IDs
+  const checkedIds = Object.keys(j(PAY));
+
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.className = r.balance > 0 ? 'pos' : (r.balance < 0 ? 'neg' : 'zero');
+
+    // Build checkbox html, checked if in stored data
+    const isChecked = checkedIds.includes(r.id);
+    const checkboxHtml = `<input type="checkbox" data-id="${r.id}" ${isChecked ? 'checked' : ''}>`;
+
+    tr.innerHTML = `<td>${r.balance>0 ? checkboxHtml : ''}</td>
       <td>${r.name}</td><td>${r.losses}</td>
       <td class="price" data-id="${r.id}">${money(r.price)}</td>
       <td>${money(r.owes)}</td><td>${money(r.paid)}</td><td>${money(r.balance)}</td>`;
-    (r.balance>0?els.outBody:els.paidBody).appendChild(tr);
+
+    // Append row to appropriate table
+    (r.balance > 0 ? els.outBody : els.paidBody).appendChild(tr);
   });
-  // update stats
+
+  // Update stats
   els.stLoss.textContent=stats.losses.toLocaleString();
   els.stOwed.textContent=money(stats.owes);
   els.stAuto.textContent=money(stats.auto);
@@ -233,7 +246,7 @@ let fillAllFlag = false;
 
 // ---------- modified button handler ---------- //
 els.btnPaid.onclick=()=>{
-  const store=j(PAY);
+  const store = j(PAY);
   if(!fillAllFlag){
     // Set flag to true and check all checkboxes
     fillAllFlag=true;
