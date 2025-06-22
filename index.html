@@ -3,7 +3,8 @@
 <html lang="en"><meta charset="UTF-8" />
 <title>XP-Farming Ledger</title>
 
-<!-- Styles omitted for brevity, same as your original code -->
+<!-- Styles omitted for brevity, same as previous -->
+
 <style>
 :root{ --bg:#101321; --card:#1b1e2e; --accent:#01bfa6; --text:#f1f1f1; --text2:#bdbdbd;
        --pos:#043c33; --neg:#3b2700 }
@@ -80,7 +81,7 @@ nav.tabbar button.active{background:var(--accent);color:#000}
 <div id="summaryData">Loading summary data...</div>
 
 <!-- Buttons -->
-<button id="btnPaid" style="margin-top:14px">Fill all as PAID</button>
+<button id="btnPaid" style="margin-top:14px">Mark selected as PAID</button>
 <p id="status"></p>
 
 <!-- Tabs -->
@@ -172,7 +173,7 @@ async function build(){
     return r;
   }).sort((a,b)=>b.balance-a.balance);
 
-  // Calculate totals
+  // Calculate totals with safe defaults
   const totalLosses = rows.length > 0 ? rows.reduce((s, r) => s + r.losses, 0) : 0;
   const totalOwed = rows.length > 0 ? rows.reduce((s, r) => s + r.owes, 0) : 0;
   const totalAuto = rows.length > 0 ? rows.reduce((s, r) => s + r.pAuto, 0) : 0;
@@ -191,7 +192,7 @@ Total Outstanding: ${money(totalOut)}
 `;
   els.summaryDiv.textContent=summaryText;
 
-  // Tooltip handling
+  // Set tooltip position when clicking info icon
   els.autoInfoIcon.onclick=()=>{
     const rect=els.autoInfoIcon.getBoundingClientRect();
     els.autoTooltip.style.top=(rect.bottom+window.scrollY+5)+'px';
@@ -210,45 +211,15 @@ Total Outstanding: ${money(totalOut)}
 
 /* ---------- render ---------- */
 function render({rows,stats}){
-  // Clear previous content
   els.outBody.innerHTML=els.paidBody.innerHTML='';
-
-  // Get stored checked IDs
-  const store = j(PAY);
-
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.className = r.balance > 0 ? 'pos' : (r.balance < 0 ? 'neg' : 'zero');
-
-    // determine if checkbox should be checked
-    const isChecked = store[r.id] === true;
-    const checkboxHtml = `<input type="checkbox" data-id="${r.id}" ${isChecked ? 'checked' : ''}>`;
-
-    tr.innerHTML = `<td>${r.balance>0 ? checkboxHtml : ''}</td>
-      <td>${r.name}</td>
-      <td>${r.losses}</td>
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.className=r.balance>0?'pos':(r.balance<0?'neg':'zero');
+    tr.innerHTML=`<td>${r.balance>0?'<input type="checkbox" data-id="'+r.id+'">':''}</td>
+      <td>${r.name}</td><td>${r.losses}</td>
       <td class="price" data-id="${r.id}">${money(r.price)}</td>
-      <td>${money(r.owes)}</td>
-      <td>${money(r.paid)}</td>
-      <td>${money(r.balance)}</td>`;
-
-    // Append row to table
-    (r.balance > 0 ? els.outBody : els.paidBody).appendChild(tr);
-
-    // Add event listener to checkbox to update store
-    const checkbox = tr.querySelector('input[type=checkbox]');
-    if(checkbox){
-      checkbox.addEventListener('change', () => {
-        const id = checkbox.dataset.id;
-        const store = j(PAY);
-        if(checkbox.checked){
-          store[id] = true;
-        } else {
-          delete store[id];
-        }
-        j(PAY, store);
-      });
-    }
+      <td>${money(r.owes)}</td><td>${money(r.paid)}</td><td>${money(r.balance)}</td>`;
+    (r.balance>0?els.outBody:els.paidBody).appendChild(tr);
   });
   // update stats
   els.stLoss.textContent=stats.losses.toLocaleString();
@@ -258,82 +229,50 @@ function render({rows,stats}){
   els.stOut.textContent=money(stats.out);
 }
 
-// Declare mode toggle flag outside
-let fillAllFlag=false;
+// ---------- toggle fill all checkboxes ---------- //
+let fillAllFlag = false;
 
-/* ---------- toggle button handler ---------- */
-els.btnPaid.onclick = () => {
-  const store = j(PAY);
-  if (!fillAllFlag) {
+// ---------- modified button handler ---------- //
+els.btnPaid.onclick=()=>{
+  const store=j(PAY);
+  if(fillAllFlag){
     // Fill all checkboxes
-    fillAllFlag=true;
     document.querySelectorAll('#tblOut tbody input[type=checkbox]').forEach(cb => {
-      cb.checked=true;
+      cb.checked = true;
     });
+    // Do NOT reset toggle, so next click will mark checked boxes
   } else {
-    // Save only checked checkboxes
-    fillAllFlag=false;
+    // Mark only checked checkboxes
     document.querySelectorAll('#tblOut tbody input[type=checkbox]:checked').forEach(cb => {
-      const id=cb.dataset.id;
-      store[id]=true;
+      const id = cb.dataset.id;
+      const bal = +cb.closest('tr').lastElementChild.textContent.replace(/[^\d-]/g,'');
+      store[id] = (store[id] || 0) + bal;
     });
+    // Reset toggle so next click will fill all
+    fillAllFlag = false;
   }
-  // Update button appearance and text
-  els.btnPaid.classList.toggle('active-fill-all', fillAllFlag);
-  els.btnPaid.textContent = fillAllFlag ? 'Mark selected as PAID' : 'Fill all as PAID';
-
-  j(PAY,store);
+  j(PAY, store);
   refresh();
 };
 
-/* ---------- save config ---------- */
-els.save.onclick=()=>{
-  j(CFG,{key:els.myKey.value.trim(),price:+els.price.value});
-  els.cfgBox.removeAttribute('open');
-  refresh();
-};
-
-// Table cell editing
+/* ---------- existing code ---------- */
+els.save.onclick=()=>{j(CFG,{key:els.myKey.value.trim(),price:+els.price.value});
+                      els.cfgBox.removeAttribute('open'); refresh();};
 [els.outBody,els.paidBody].forEach(tb=>tb.addEventListener('click',e=>{
   if(!e.target.classList.contains('price'))return;
-  const id=e.target.dataset.id;
-  const current=+e.target.textContent.replace(/[^\d]/g,'');
+  const id=e.target.dataset.id,current=+e.target.textContent.replace(/[^\d]/g,'');
   const val=prompt('New price per loss:',current);
-  if(val===null)return; 
-  const num=+val;
+  if(val===null)return; const num=+val;
   if(isNaN(num)||num<0){alert('Invalid number');return;}
-  const map=j(PRC);
-  map[id]=num;
-  j(PRC,map);
-  refresh();
+  const map=j(PRC); map[id]=num; j(PRC,map); refresh();
 }));
-
-// Tab switching
-els.tabOut.onclick=()=>switchTab(true);
-els.tabPaid.onclick=()=>switchTab(false);
-function switchTab(out){
-  els.tabOut.classList.toggle('active',out);
+els.tabOut.onclick=()=>switchTab(true); els.tabPaid.onclick=()=>switchTab(false);
+function switchTab(out){els.tabOut.classList.toggle('active',out);
   els.tabPaid.classList.toggle('active',!out);
   $('tblOut').style.display=out?'':'none';
-  $('tblPaid').style.display=out?'none':'';
-}
-
-// Initialize
-(async()=>{
-  const cfg=j(CFG);
-  if(cfg.key)els.myKey.value=cfg.key;
-  if(cfg.price)els.price.value=cfg.price;
-  if(cfg.key)els.cfgBox.removeAttribute('open');
-  await refresh();
-})();
-
-async function refresh(){
-  try{
-    render(await build());
-  }catch(e){
-    els.stat.textContent='Error: '+e;
-    console.error(e);
-  }
-}
+  $('tblPaid').style.display=out?'none':'';}
+(async()=>{const cfg=j(CFG); if(cfg.key)els.myKey.value=cfg.key; if(cfg.price)els.price.value=cfg.price; if(cfg.key)els.cfgBox.removeAttribute('open'); refresh();})();
+async function refresh(){try{render(await build())}catch(e){els.stat.textContent='Error: '+e;console.error(e)}} 
 </script>
-</body></html>
+</body>
+</html>
