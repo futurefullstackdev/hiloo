@@ -3,8 +3,7 @@
 <html lang="en"><meta charset="UTF-8" />
 <title>XP-Farming Ledger</title>
 
-<!-- Styles omitted for brevity, same as previous -->
-
+<!-- Styles omitted for brevity, same as your original code -->
 <style>
 :root{ --bg:#101321; --card:#1b1e2e; --accent:#01bfa6; --text:#f1f1f1; --text2:#bdbdbd;
        --pos:#043c33; --neg:#3b2700 }
@@ -229,50 +228,79 @@ function render({rows,stats}){
   els.stOut.textContent=money(stats.out);
 }
 
-// ---------- toggle fill all checkboxes ---------- //
+// Declare the toggle flag outside the handler
 let fillAllFlag = false;
 
 // ---------- modified button handler ---------- //
 els.btnPaid.onclick=()=>{
   const store=j(PAY);
-  if(fillAllFlag){
-    // Fill all checkboxes
+  if(!fillAllFlag){
+    // Set flag to true and check all checkboxes
+    fillAllFlag=true;
     document.querySelectorAll('#tblOut tbody input[type=checkbox]').forEach(cb => {
       cb.checked = true;
     });
-    // Do NOT reset toggle, so next click will mark checked boxes
   } else {
-    // Mark only checked checkboxes
+    // Reset flag and process checked checkboxes
+    fillAllFlag=false;
     document.querySelectorAll('#tblOut tbody input[type=checkbox]:checked').forEach(cb => {
-      const id = cb.dataset.id;
-      const bal = +cb.closest('tr').lastElementChild.textContent.replace(/[^\d-]/g,'');
+      const id=cb.dataset.id;
+      const bal=+cb.closest('tr').lastElementChild.textContent.replace(/[^\d-]/g,'');
       store[id] = (store[id] || 0) + bal;
     });
-    // Reset toggle so next click will fill all
-    fillAllFlag = false;
   }
   j(PAY, store);
   refresh();
 };
 
-/* ---------- existing code ---------- */
-els.save.onclick=()=>{j(CFG,{key:els.myKey.value.trim(),price:+els.price.value});
-                      els.cfgBox.removeAttribute('open'); refresh();};
+// ---------- existing code for save button ----------
+els.save.onclick=()=>{
+  j(CFG,{key:els.myKey.value.trim(),price:+els.price.value});
+  els.cfgBox.removeAttribute('open');
+  refresh();
+};
+
+// Existing code for table cell editing
 [els.outBody,els.paidBody].forEach(tb=>tb.addEventListener('click',e=>{
   if(!e.target.classList.contains('price'))return;
-  const id=e.target.dataset.id,current=+e.target.textContent.replace(/[^\d]/g,'');
+  const id=e.target.dataset.id;
+  const current=+e.target.textContent.replace(/[^\d]/g,'');
   const val=prompt('New price per loss:',current);
-  if(val===null)return; const num=+val;
+  if(val===null)return; 
+  const num=+val;
   if(isNaN(num)||num<0){alert('Invalid number');return;}
-  const map=j(PRC); map[id]=num; j(PRC,map); refresh();
+  const map=j(PRC);
+  map[id]=num;
+  j(PRC,map);
+  refresh();
 }));
-els.tabOut.onclick=()=>switchTab(true); els.tabPaid.onclick=()=>switchTab(false);
-function switchTab(out){els.tabOut.classList.toggle('active',out);
+
+// Tab switching
+els.tabOut.onclick=()=>switchTab(true); 
+els.tabPaid.onclick=()=>switchTab(false);
+function switchTab(out){
+  els.tabOut.classList.toggle('active',out);
   els.tabPaid.classList.toggle('active',!out);
   $('tblOut').style.display=out?'':'none';
-  $('tblPaid').style.display=out?'none':'';}
-(async()=>{const cfg=j(CFG); if(cfg.key)els.myKey.value=cfg.key; if(cfg.price)els.price.value=cfg.price; if(cfg.key)els.cfgBox.removeAttribute('open'); refresh();})();
-async function refresh(){try{render(await build())}catch(e){els.stat.textContent='Error: '+e;console.error(e)}} 
+  $('tblPaid').style.display=out?'none':'';
+}
+
+// Initialize on load
+(async()=>{
+  const cfg=j(CFG);
+  if(cfg.key)els.myKey.value=cfg.key;
+  if(cfg.price)els.price.value=cfg.price;
+  if(cfg.key)els.cfgBox.removeAttribute('open');
+  await refresh();
+})();
+async function refresh(){
+  try{
+    render(await build());
+  }catch(e){
+    els.stat.textContent='Error: '+e;
+    console.error(e);
+  }
+}
 </script>
 </body>
 </html>
