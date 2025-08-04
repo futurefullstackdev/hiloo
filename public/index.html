@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crystal Collectors - Multiplayer Game</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(45deg, #1a0033, #330066, #004d66, #006633);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+            font-family: 'Orbitron', monospace;
+            color: white;
+            overflow: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        #gameContainer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        #loginScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 2px solid #00ffff;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            z-index: 1000;
+        }
+
+        #loginScreen h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes textGlow {
+            from { filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)); }
+            to { filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)); }
+        }
+
+        #playerNameInput {
+            padding: 15px;
+            font-size: 1.2em;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            margin: 20px 0;
+            width: 300px;
+            text-align: center;
+            font-family: 'Orbitron', monospace;
+        }
+
+        #playerNameInput::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #joinGameBtn {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: linear-gradient(45deg, #ff0066, #6600ff);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 0, 102, 0.4);
+        }
+
+        #joinGameBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 0, 102, 0.6);
+        }
+
+        #gameUI {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px solid #00ffff;
+            backdrop-filter: blur(5px);
+        }
+
+        #scoreBoard {
+            margin-bottom: 15px;
+        }
+
+        #playerScore {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
+        }
+
+        #playersList {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .player-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #ffff00;
+            font-size: 0.9em;
+            backdrop-filter: blur(5px);
+        }
+
+        #notifications {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            z-index: 200;
+        }
+
+        .notification {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            animation: slideIn 0.5s ease, fadeOut 0.5s ease 3s forwards;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        canvas {
+            border: 3px solid #00ffff;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="loginScreen">
+            <h1>🔮 Crystal Collectors 🔮</h1>
+            <p style="margin-bottom: 20px; font-size: 1.1em;">Collect magical crystals and compete with other players!</p>
+            <input type="text" id="playerNameInput" placeholder="Enter your mystical name..." maxlength="20">
+            <br>
+            <button id="joinGameBtn">Join the Crystal Hunt!</button>
+        </div>
+
+        <div id="gameUI" style="display: none;">
+            <div id="scoreBoard">
+                <div id="playerScore">Score: 0</div>
+            </div>
+            <div id="playersList">
+                <h3 style="color: #ffff00; margin-bottom: 10px;">🏆 Leaderboard</h3>
+            </div>
+        </div>
+
+        <div id="instructions" style="display: none;">
+            <h4 style="color: #ffff00;">🎮 Controls</h4>
+            <p>• Use WASD or Arrow Keys to move</p>
+            <p>• Collect crystals to earn points</p>
+            <p>• Different crystals have different values</p>
+            <p>• Compete with other players!</p>
+        </div>
+
+        <div id="notifications"></div>
+    </div>
+
+    <script>
+        // Socket.IO connection
+        const socket = io();
+        
+        // Game variables
+        let game;
+        let gameScene;
+        let players = {};
+        let crystals = {};
+        let currentPlayer = null;
+        let cursors;
+        let wasdKeys;
+        
+        // UI elements
+        const loginScreen = document.getElementById('loginScreen');
+        const gameUI = document.getElementById('gameUI');
+        const instructions = document.getElementById('instructions');
+        const playerNameInput = document.getElementById('playerNameInput');
+        const joinGameBtn = document.getElementById('joinGameBtn');
+        const playerScore = document.getElementById('playerScore');
+        const playersList = document.getElementById('playersList');
+        const notifications = document.getElementById('notifications');
+
+        // Join game functionality
+        joinGameBtn.addEventListener('click', joinGame);
+        playerNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') joinGame();
+        });
+
+        function joinGame() {
+            const playerName = playerNameInput.value.trim() || 'Crystal Hunter';
+            socket.emit('join-game', playerName);
+            loginScreen.style.display = 'none';
+            gameUI.style.display = 'block';
+            instructions.style.display = 'block';
+            initializeGame();
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            notifications.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 4000);
+        }
+
+        // Phaser game configuration
+        function initializeGame() {
+            const config = {
+                type: Phaser.AUTO,
+                width: 1200,
+                height: 800,
+                parent: 'gameContainer',
+                backgroundColor: '#001122',
+                physics: {
+                    default: 'arcade',
+                    arcade: {
+                        debug: false
+                    }
+                },
+                scene: {
+                    preload: preload,
+                    create: create,
+                    update: update
+                }
+            };
+
+            game = new Phaser.Game(config);
+        }
+
+        function preload() {
+            // Create colorful graphics for players and crystals
+            this.load.image('player', 'data:image/svg+xml;base64,' + btoa(`
+                <svg width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="25" cy="25" r="20" fill="#ff6b6b" stroke="#ffffff" stroke-width="3"/>
+                    <circle cx="18" cy="20" r="3" fill="#ffffff"/>
+                    <circle cx="32" cy="20" r="3" fill="#ffffff"/>
+                    <path d="M 15 30 Q 25 40 35 30" stroke="#ffffff" stroke-width="2" fill="none"/>
+                </svg>
+            `));
+
+            this.load.image('crystal', 'data:image/svg+xml;base64,' + btoa(`
+                <svg width="30" height="30" xmlns="http://www.w3.org/2000/svg">
+                    <polygon points="15,2 25,10 20,25 10,25 5,10" fill="#00ffff" stroke="#ffffff" stroke-width="2"/>
+                    <polygon points="15,2 20,8 15,15 10,8" fill="#ffffff" opacity="0.5"/>
+                </svg>
+            `));
+        }
+
+        function create() {
+            gameScene = this;
+            
+            // Create starfield background
+            for (let i = 0; i < 100; i++) {
+                const star = this.add.circle(
+                    Math.random() * 1200,
+                    Math.random() * 800,
+                    Math.random() * 2 + 1,
+                    0xffffff,
+                    Math.random() * 0.8 + 0.2
+                );
+                star.setDepth(-1);
+            }
+
+            // Input handling
+            cursors = this.input.keyboard.createCursorKeys();
+            wasdKeys = this.input.keyboard.addKeys('W,S,A,D');
+        }
+
+        function update() {
+            if (!currentPlayer) return;
+
+            // Handle player movement
+            let moving = false;
+            const speed = 200;
+            let velocityX = 0;
+            let velocityY = 0;
+
+            if (cursors.left.isDown || wasdKeys.A.isDown) {
+                velocityX = -speed;
+                moving = true;
+            } else if (cursors.right.isDown || wasdKeys.D.isDown) {
+                velocityX = speed;
+                moving = true;
+            }
+
+            if (cursors.up.isDown || wasdKeys.W.isDown) {
+                velocityY = -speed;
+                moving = true;
+            } else if (cursors.down.isDown || wasdKeys.S.isDown) {
+                velocityY = speed;
+                moving = true;
+            }
+
+            if (moving && currentPlayer.sprite) {
+                currentPlayer.sprite.setVelocity(velocityX, velocityY);
+                
+                // Send movement to server
+                socket.emit('player-move', {
+                    x: currentPlayer.sprite.x,
+                    y: currentPlayer.sprite.y
+                });
+            } else if (currentPlayer.sprite) {
+                currentPlayer.sprite.setVelocity(0, 0);
+            }
+
+            // Check crystal collection
+            Object.values(crystals).forEach(crystal => {
+                if (crystal.sprite && currentPlayer.sprite) {
+                    const distance = Phaser.Math.Distance.Between(
+                        currentPlayer.sprite.x, currentPlayer.sprite.y,
+                        crystal.sprite.x, crystal.sprite.y
+                    );
+                    
+                    if (distance < 40) {
+                        socket.emit('collect-crystal', crystal.id);
+                    }
+                }
+            });
+        }
+
+        // Socket event handlers
+        socket.on('game-state', (gameState) => {
+            // Initialize current player
+            currentPlayer = gameState.players[socket.id];
+            
+            // Create all players
+            Object.values(gameState.players).forEach(player => {
+                createPlayer(player);
+            });
+            
+            // Create all crystals
+            gameState.crystals.forEach(crystal => {
+                createCrystal(crystal);
+            });
+            
+            updateUI();
+        });
+
+        socket.on('player-joined', (player) => {
+            createPlayer(player);
+            showNotification(`${player.name} joined the crystal hunt!`, 'join');
+            updateUI();
+        });
+
+        socket.on('player-moved', (movement) => {
+            if (players[movement.id] && players[movement.id].sprite) {
+                players[movement.id].sprite.setPosition(movement.x, movement.y);
+            }
+        });
+
+        socket.on('player-left', (playerId) => {
+            if (players[playerId]) {
+                if (players[playerId].sprite) {
+                    players[playerId].sprite.destroy();
+                }
+                if (players[playerId].nameText) {
+                    players[playerId].nameText.destroy();
+                }
+                delete players[playerId];
+                updateUI();
+            }
+        });
+
+        socket.on('crystal-collected', (data) => {
+            if (crystals[data.crystalId]) {
+                // Create collection effect
+                if (gameScene && crystals[data.crystalId].sprite) {
+                    const effect = gameScene.add.circle(
+                        crystals[data.crystalId].sprite.x,
+                        crystals[data.crystalId].sprite.y,
+                        30, 0xffff00, 0.8
+                    );
+                    
+                    gameScene.tweens.add({
+                        targets: effect,
+                        scaleX: 2,
+                        scaleY: 2,
+                        alpha: 0,
+                        duration: 500,
+                        onComplete: () => effect.destroy()
+                    });
+                }
+                
+                // Remove crystal
+                if (crystals[data.crystalId].sprite) {
+                    crystals[data.crystalId].sprite.destroy();
+                }
+                delete crystals[data.crystalId];
+            }
+            
+            // Update player score
+            if (players[data.playerId]) {
+                players[data.playerId].score = data.newScore;
+            }
+            
+            // Update current player score if it's them
+            if (data.playerId === socket.id) {
+                currentPlayer.score = data.newScore;
+            }
+            
+            showNotification(`${data.playerName} collected a crystal! +${data.value} points`, 'collect');
+            updateUI();
+        });
+
+        socket.on('new-crystal', (crystal) => {
+            createCrystal(crystal);
+        });
+
+        socket.on('crystal-pulse-update', (pulseData) => {
+            pulseData.forEach(data => {
+                if (crystals[data.id] && crystals[data.id].sprite) {
+                    const scale = 1 + Math.sin(data.pulsePhase) * 0.2;
+                    crystals[data.id].sprite.setScale(scale);
+                }
+            });
+        });
+
+        // Game object creation functions
+        function createPlayer(playerData) {
+            if (!gameScene) return;
+            
+            players[playerData.id] = playerData;
+            
+            // Create player sprite
+            const sprite = gameScene.physics.add.sprite(playerData.x, playerData.y, 'player');
+            sprite.setTint(playerData.color);
+            sprite.setCollideWorldBounds(true);
+            sprite.setDrag(300);
+            
+            // Create player name text
+            const nameText = gameScene.add.text(playerData.x, playerData.y - 35, playerData.name, {
+                fontSize: '14px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 2
+            }).setOrigin(0.5);
+            
+            players[playerData.id].sprite = sprite;
+            players[playerData.id].nameText = nameText;
+            
+            // Update name position with player movement
+            sprite.on('postupdate', () => {
+                nameText.setPosition(sprite.x, sprite.y - 35);
+            });
+        }
+
+        function createCrystal(crystalData) {
+            if (!gameScene) return;
+            
+            crystals[crystalData.id] = crystalData;
+            
+            // Create crystal sprite
+            const sprite = gameScene.add.sprite(crystalData.x, crystalData.y, 'crystal');
+            sprite.setTint(crystalData.color);
+            sprite.setScale(1);
+            
+            crystals[crystalData.id].sprite = sprite;
+            
+            // Add sparkle effect
+            const sparkle = gameScene.add.circle(crystalData.x, crystalData.y, 25, crystalData.color, 0.2);
+            sparkle.setDepth(-0.5);
+            crystals[crystalData.id].sparkle = sparkle;
+            
+            gameScene.tweens.add({
+                targets: sparkle,
+                scaleX: 1.5,
+                scaleY: 1.5,
+                alpha: 0.5,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1
+            });
+        }
+
+        function updateUI() {
+            if (currentPlayer) {
+                playerScore.textContent = `Score: ${currentPlayer.score}`;
+            }
+            
+            // Update leaderboard
+            const sortedPlayers = Object.values(players).sort((a, b) => b.score - a.score);
+            playersList.innerHTML = '<h3 style="color: #ffff00; margin-bottom: 10px;">🏆 Leaderboard</h3>';
+            
+            sortedPlayers.forEach((player, index) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player-info';
+                playerDiv.innerHTML = `
+                    <span>${index + 1}. ${player.name}</span>
+                    <span style="color: #00ffff;">${player.score}</span>
+                `;
+                playersList.appendChild(playerDiv);
+            });
+        }
+    </script>
+</body>
+</html>
