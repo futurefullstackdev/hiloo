@@ -1,278 +1,1134 @@
 <!DOCTYPE html>
-<!--  XP-Farming Ledger  ·  v-7  ·  toggle fill checkboxes -->
-<html lang="en"><meta charset="UTF-8" />
-<title>XP-Farming Ledger</title>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zed City API Documentation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-tomorrow.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<!-- Styles omitted for brevity, same as previous -->
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            background: #0f0f23;
+            color: #e4e4e7;
+        }
 
-<style>
-:root{ --bg:#101321; --card:#1b1e2e; --accent:#01bfa6; --text:#f1f1f1; --text2:#bdbdbd;
-       --pos:#043c33; --neg:#3b2700 }
-*{box-sizing:border-box;margin:0}
-body{font-family:Inter,Arial,sans-serif;background:var(--bg);color:var(--text);
-     padding:28px;line-height:1.45}
-h1{font-size:1.8rem;margin-bottom:18px}
-.card{background:var(--card);border-radius:8px;padding:20px;box-shadow:0 4px 14px rgba(0,0,0,.4);
-      margin-bottom:22px}
-details summary{cursor:pointer;font-weight:600}
-details[open] summary{margin-bottom:12px}
-label{display:inline-block;margin-right:20px;margin-bottom:10px;color:var(--text2)}
-input[type=number],input[type=password]{
-  background:#111420;border:1px solid #333;border-radius:4px;color:var(--text);
-  padding:4px 6px;width:130px}
-button{background:var(--accent);border:none;border-radius:5px;color:#000;font-weight:600;
-       cursor:pointer;padding:6px 16px;margin-top:8px;letter-spacing:.3px}
-button:disabled{opacity:.35;cursor:default}
-table{border-collapse:collapse;width:100%;font-size:.95rem}
-th{font-weight:600;color:var(--text2);padding:6px 4px} td{padding:6px 4px;text-align:center}
-tbody tr:nth-child(even){background:#202231}
-tbody tr.pos{background:var(--pos)} tbody tr.neg{background:var(--neg)}
-tbody tr.zero{background:#202231} tbody tr:hover{background:#2c2f44}
-td.price{cursor:pointer;color:var(--accent)} td.price:hover{background:#264e49}
-#status{font-style:italic;margin:10px 2px}
-nav.tabbar{display:flex;gap:6px;margin-bottom:8px}
-nav.tabbar button{background:#202335;padding:6px 14px;color:var(--text2);
-                  border-radius:5px;border:none;cursor:pointer}
-nav.tabbar button.active{background:var(--accent);color:#000}
-.stats ul{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px 16px}
-.stats li{color:var(--text2)} .stats strong{color:var(--text)}
-#summaryData {
-  background:#222; padding:10px; border-radius:8px; margin-top:20px; font-family:monospace; white-space: pre-wrap;
-}
-#autoTooltip {
-  display:none; position:absolute; background:#333; color:#fff; padding:8px; border-radius:4px; max-width:250px; z-index:1000;
-}
-</style>
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
 
+        .sidebar {
+            width: 280px;
+            background: #18181b;
+            border-right: 1px solid #27272a;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .logo {
+            padding: 2rem;
+            border-bottom: 1px solid #27272a;
+        }
+
+        .logo h1 {
+            color: #dc2626;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .logo .subtitle {
+            color: #94a3b8;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .nav {
+            padding: 1rem 0;
+        }
+
+        .nav-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .nav-title {
+            padding: 0.5rem 2rem;
+            font-weight: 600;
+            color: #9ca3af;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 0.75rem 2rem;
+            color: #d1d5db;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: #1e293b;
+            color: #dc2626;
+            border-left-color: #dc2626;
+        }
+
+        .main {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+            max-width: calc(100vw - 280px);
+        }
+
+        .content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .section {
+            margin-bottom: 3rem;
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section h1 {
+            color: #f8fafc;
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .section h2 {
+            color: #dc2626;
+            font-size: 1.875rem;
+            margin: 2rem 0 1rem 0;
+            font-weight: 600;
+        }
+
+        .section h3 {
+            color: #e2e8f0;
+            font-size: 1.25rem;
+            margin: 1.5rem 0 0.75rem 0;
+            font-weight: 600;
+        }
+
+        .section p {
+            margin-bottom: 1rem;
+            color: #cbd5e1;
+        }
+
+        .endpoint-group {
+            margin-bottom: 2rem;
+        }
+
+        .endpoint {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            margin: 1rem 0;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .endpoint-header {
+            background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .method {
+            display: inline-block;
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            background: #059669;
+            color: white;
+        }
+
+        .endpoint-url {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 1rem;
+            color: white;
+            font-weight: 500;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .endpoint-body {
+            padding: 1.5rem;
+        }
+
+        .endpoint-description {
+            color: #cbd5e1;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .code-block {
+            background: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .code-header {
+            background: #1e293b;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            color: #94a3b8;
+            border-bottom: 1px solid #334155;
+        }
+
+        .code-content {
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        pre {
+            margin: 0 !important;
+            background: transparent !important;
+        }
+
+        .parameter-table {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow: hidden;
+        }
+
+        .parameter-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .parameter-table th {
+            background: #334155;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #f1f5f9;
+            border-bottom: 1px solid #475569;
+        }
+
+        .parameter-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #334155;
+            vertical-align: top;
+        }
+
+        .parameter-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .param-name {
+            font-family: 'Monaco', 'Menlo', monospace;
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        .param-type {
+            color: #34d399;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .param-required {
+            color: #f87171;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .param-optional {
+            color: #94a3b8;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            border-left: 4px solid;
+        }
+
+        .alert.info {
+            background: #1e3a8a20;
+            border-color: #3b82f6;
+            color: #93c5fd;
+        }
+
+        .alert.warning {
+            background: #92400e20;
+            border-color: #f59e0b;
+            color: #fbbf24;
+        }
+
+        .alert.error {
+            background: #b9123520;
+            border-color: #ef4444;
+            color: #fca5a5;
+        }
+
+        .try-it-btn {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1rem;
+        }
+
+        .try-it-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .add-endpoint-btn {
+            background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 2rem 0;
+            display: block;
+            width: 100%;
+            font-size: 1rem;
+        }
+
+        .add-endpoint-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .endpoint-template {
+            border: 2px dashed #475569;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            color: #94a3b8;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main {
+                margin-left: 0;
+                max-width: 100vw;
+            }
+            
+            .mobile-menu-btn {
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                z-index: 200;
+                background: #dc2626;
+                color: white;
+                border: none;
+                padding: 0.5rem;
+                border-radius: 6px;
+                cursor: pointer;
+            }
+
+            .endpoint-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .endpoint-url {
+                word-break: break-all;
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
 <body>
-<h1>XP-Farming Ledger</h1>
+    <div class="container">
+        <nav class="sidebar" id="sidebar">
+            <div class="logo">
+                <h1>🧟 Zed City API</h1>
+                <div class="subtitle">Zombie Survival Game API</div>
+            </div>
+            
+            <div class="nav">
+                <div class="nav-section">
+                    <div class="nav-title">Getting Started</div>
+                    <a href="#overview" class="nav-link active">Overview</a>
+                    <a href="#authentication" class="nav-link">Authentication</a>
+                    <a href="#errors" class="nav-link">Error Handling</a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-title">Game Data</div>
+                    <a href="#quests" class="nav-link">Quests</a>
+                    <a href="#activities" class="nav-link">Activities</a>
+                    <a href="#character" class="nav-link">Character</a>
+                    <a href="#world" class="nav-link">World</a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-title">Social & Combat</div>
+                    <a href="#faction" class="nav-link">Factions</a>
+                    <a href="#combat" class="nav-link">Combat</a>
+                    <a href="#communication" class="nav-link">Communication</a>
+                </div>
 
-<!-- SETTINGS -->
-<details id="cfgBox" class="card" open>
-  <summary>⚙  Settings</summary>
-  <label>API key
-    <input id="myKey" type="password" size="46" />
-  </label>
-  <label>Default $ / loss
-    <input id="price" type="number" step="10000" min="0" value="150000" />
-  </label>
-  <button id="saveCfg">Save & Refresh</button>
-</details>
+                <div class="nav-section">
+                    <div class="nav-title">Economy</div>
+                    <a href="#trading" class="nav-link">Trading</a>
+                    <a href="#crafting" class="nav-link">Crafting</a>
+                </div>
+            </div>
+        </nav>
 
-<!-- STATISTICS -->
-<section class="card stats">
-  <h2 style="margin-bottom:12px">Statistics</h2>
-  <ul>
-    <li>Total bought losses <strong id="stLoss">0</strong></li>
-    <li>Total owed <strong id="stOwed">$0</strong></li>
-    <li>
-      Auto-paid <strong id="stAuto">$0</strong> 
-      <span id="autoInfoIcon" style="cursor:pointer; margin-left:4px;">ℹ️</span>
-    </li>
-    <li>Manually paid <strong id="stMan">$0</strong></li>
-    <li>Outstanding <strong id="stOut">$0</strong></li>
-  </ul>
-</section>
+        <main class="main">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()" style="display: none;">☰</button>
+            
+            <div class="content">
+                <!-- Overview Section -->
+                <section id="overview" class="section active">
+                    <h1>Zed City API Documentation</h1>
+                    <p>Welcome to the Zed City API! This API provides access to all game data for the zombie survival game Zed City. Use these endpoints to retrieve information about quests, player activities, character progression, world state, and more.</p>
+                    
+                    <div class="alert info">
+                        <strong>Base URL:</strong> <code>https://api.zed.city</code>
+                    </div>
+                    
+                    <h2>Quick Start</h2>
+                    <p>All endpoints are simple GET requests that return JSON data. No authentication is required for public game data.</p>
 
-<!-- Tooltip -->
-<div id="autoTooltip">This will check for payments you made then mark as paid.</div>
+                    <div class="code-block">
+                        <div class="code-header">Example Request</div>
+                        <div class="code-content">
+                            <pre><code class="language-bash">curl -X GET "https://api.zed.city/getQuests" \
+  -H "Content-Type: application/json"</code></pre>
+                        </div>
+                    </div>
 
-<!-- Summary Data -->
-<div id="summaryData">Loading summary data...</div>
+                    <h2>Response Format</h2>
+                    <p>All responses are returned in JSON format with appropriate HTTP status codes.</p>
+                </section>
 
-<!-- Buttons -->
-<button id="btnPaid" style="margin-top:14px">Mark selected as PAID</button>
-<p id="status"></p>
+                <!-- Authentication Section -->
+                <section id="authentication" class="section">
+                    <h1>Authentication</h1>
+                    <p>Currently, the Zed City API endpoints listed here are public and do not require authentication. All game data can be accessed without API keys or tokens.</p>
+                    
+                    <div class="alert info">
+                        <strong>Public Access:</strong> No authentication required for current endpoints.
+                    </div>
+                    
+                    <p>Future endpoints may implement authentication for player-specific data or administrative functions.</p>
+                </section>
 
-<!-- Tabs -->
-<nav class="tabbar">
-  <button id="tabOut" class="active">Outstanding</button>
-  <button id="tabPaid">Paid</button>
-</nav>
+                <!-- Error Handling Section -->
+                <section id="errors" class="section">
+                    <h1>Error Handling</h1>
+                    <p>The API uses conventional HTTP response codes to indicate success or failure of requests.</p>
+                    
+                    <h3>HTTP Status Codes</h3>
+                    <div class="parameter-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="param-name">200</span></td>
+                                    <td>OK - Request successful</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">400</span></td>
+                                    <td>Bad Request - Invalid parameters</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">404</span></td>
+                                    <td>Not Found - Endpoint or resource doesn't exist</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="param-name">500</span></td>
+                                    <td>Internal Server Error</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
 
-<!-- Tables -->
-<div id="tables" class="card" style="padding:0">
-  <table id="tblOut"><thead>
-    <tr><th>✓</th><th>Attacker</th><th>Loses</th><th>Price</th>
-        <th>Owes</th><th>Paid</th><th>Balance</th></tr>
-  </thead><tbody></tbody></table>
-  <table id="tblPaid" style="display:none"><thead>
-    <tr><th></th><th>Attacker</th><th>Loses</th><th>Price</th>
-        <th>Owes</th><th>Paid</th><th>Balance</th></tr>
-  </thead><tbody></tbody></table>
-</div>
+                <!-- Quests Section -->
+                <section id="quests" class="section">
+                    <h1>Quests</h1>
+                    <p>Retrieve information about available quests, missions, and objectives in Zed City.</p>
 
-<script>
-/* ---------- helpers & storage ---------- */
-const $=id=>document.getElementById(id);
-const els={
- myKey:$('myKey'),price:$('price'),save:$('saveCfg'),cfgBox:$('cfgBox'),
- stat:$('status'),outBody:$('tblOut').querySelector('tbody'),
- paidBody:$('tblPaid').querySelector('tbody'),btnPaid:$('btnPaid'),
- tabOut:$('tabOut'),tabPaid:$('tabPaid'),
- stLoss:$('stLoss'),stOwed:$('stOwed'),stAuto:$('stAuto'),
- stMan:$('stMan'),stOut:$('stOut'), summaryDiv:$('summaryData'),
- autoTooltip:$('autoTooltip'), autoInfoIcon:$('autoInfoIcon')
-};
-const j=(k,v)=>v===undefined?JSON.parse(localStorage.getItem(k)||'{}')
-                             :localStorage.setItem(k,JSON.stringify(v));
-const CFG='xplCfg',PAY='xplPay',PRC='xplPrices';
-const money=n=>'$'+n.toLocaleString('en-US');
-
-/* ---------- Torn API ---------- */
-async function api(path){const r=await fetch(path);const j=await r.json();
-                         if(j.error)throw j.error.error; return j;}
-async function resolveId(key){
-  const d=await api(`https://api.torn.com/user/?selections=basic&key=${key}`);return d.player_id}
-async function getAttacks(id,key){
-  const d=await api(`https://api.torn.com/user/${id}?selections=attacks&key=${key}`);
-  return Object.values(d.attacks||{})}
-async function getEvents(id,key){
-  const d=await api(`https://api.torn.com/user/${id}?selections=events&key=${key}`);
-  return Object.values(d.events||{})}
-
-/* ---------- auto-payment extractor ---------- */
-function scanAutoPayments(events){
-  const map={};
-  events.forEach(e=>{
-    if(!e.initiator_id)return;
-    const cash=  e.data?.cash   || e.data?.amount || (/\$([\d,]+)/.exec(e.event||e.title||'')||[])[1];
-    if(!cash)return;
-    const val=+String(cash).replace(/[, ]/g,'');
-    if(val>0) map[e.initiator_id]=(map[e.initiator_id]||0)+val;
-  });
-  return map;
-}
-
-/* ---------- build data model ---------- */
-async function build(){
-  const cfg=j(CFG);
-  if(!cfg.key){els.stat.textContent='Enter API key.';return{rows:[]}}
-
-  if(!cfg.id){els.stat.textContent='Resolving player ID…';
-              cfg.id=await resolveId(cfg.key);j(CFG,cfg)}
-
-  els.stat.textContent='Fetching attack log & events…';
-  const [attacks,events]=await Promise.all([
-      getAttacks(cfg.id,cfg.key), getEvents(cfg.id,cfg.key)]);
-
-  const g={}, defP=cfg.price||0, price=j(PRC);
-  attacks.forEach(a=>{
-    if(a.defender_id==cfg.id && a.result==='Lost')
-      (g[a.attacker_id]??={id:a.attacker_id,name:a.attacker_name,losses:0}).losses++});
-  const auto=scanAutoPayments(events);
-  const manual=j(PAY);
-
-  const rows=Object.values(g).map(r=>{
-    r.price = price[r.id]??defP;
-    r.owes  = r.losses*r.price;
-    r.pAuto = auto[r.id]||0;
-    r.pMan  = manual[r.id]||0;
-    r.paid  = r.pAuto+r.pMan;
-    r.balance=r.owes-r.paid;
-    return r;
-  }).sort((a,b)=>b.balance-a.balance);
-
-  // Calculate totals with safe defaults
-  const totalLosses = rows.length > 0 ? rows.reduce((s, r) => s + r.losses, 0) : 0;
-  const totalOwed = rows.length > 0 ? rows.reduce((s, r) => s + r.owes, 0) : 0;
-  const totalAuto = rows.length > 0 ? rows.reduce((s, r) => s + r.pAuto, 0) : 0;
-  const totalMan = rows.length > 0 ? rows.reduce((s, r) => s + r.pMan, 0) : 0;
-  const totalOut = totalOwed - totalAuto - totalMan;
-
-  // Create summary string
-  const summaryText = `
---- Summary Stats ---
-Total Losses Sold: ${totalLosses}
-Total Owed: ${money(totalOwed)}
-Total Auto-paid: ${money(totalAuto)}
-Total Manual Paid: ${money(totalMan)}
-Total Outstanding: ${money(totalOut)}
----------------------
-`;
-  els.summaryDiv.textContent=summaryText;
-
-  // Set tooltip position when clicking info icon
-  els.autoInfoIcon.onclick=()=>{
-    const rect=els.autoInfoIcon.getBoundingClientRect();
-    els.autoTooltip.style.top=(rect.bottom+window.scrollY+5)+'px';
-    els.autoTooltip.style.left=(rect.left+window.scrollX)+'px';
-    els.autoTooltip.style.display='block';
-  };
-  document.addEventListener('click', (e) => {
-    if(e.target !== els.autoInfoIcon && !els.autoTooltip.contains(e.target)){
-      els.autoTooltip.style.display='none';
+                    <div class="endpoint">
+                        <div class="endpoint-header">
+                            <span class="method">GET</span>
+                            <span class="endpoint-url">/getQuests</span>
+                        </div>
+                        <div class="endpoint-body">
+                            <div class="endpoint-description">
+                                Get a list of all available quests in the game, including quest details, requirements, rewards, and completion status.
+                            </div>
+                            
+                            <div class="code-block">
+                                <div class="code-header">Example Response</div>
+                                <div class="code-content">
+                                    <pre><code class="language-json">{
+  "quests": [
+    {
+      "id": 1,
+      "title": "First Steps",
+      "description": "Learn the basics of survival in Zed City",
+      "type": "tutorial",
+      "rewards": {
+        "experience": 100,
+        "items": ["basic_weapon", "food_ration"]
+      },
+      "requirements": {
+        "level": 1,
+        "completed_quests": []
+      },
+      "status": "available"
     }
-  });
+  ]
+}</code></pre>
+                                </div>
+                            </div>
+                            
+                            <button class="try-it-btn" onclick="tryEndpoint('/getQuests', 'GET')">Try it out</button>
+                        </div>
+                    </div>
+                </section>
 
-  els.stat.textContent=`Attacks ${attacks.length}, events ${events.length}, players ${rows.length}`;
-  return {rows, stats:{losses: totalLosses, owes: totalOwed, auto: totalAuto, man: totalMan, out: totalOut}};
-}
+                <!-- Activities Section -->
+                <section id="activities" class="section">
+                    <h1>Activities</h1>
+                    <p>Access information about various survival activities available to players.</p>
 
-/* ---------- render ---------- */
-function render({rows,stats}){
-  els.outBody.innerHTML=els.paidBody.innerHTML='';
-  rows.forEach(r=>{
-    const tr=document.createElement('tr');
-    tr.className=r.balance>0?'pos':(r.balance<0?'neg':'zero');
-    tr.innerHTML=`<td>${r.balance>0?'<input type="checkbox" data-id="'+r.id+'">':''}</td>
-      <td>${r.name}</td><td>${r.losses}</td>
-      <td class="price" data-id="${r.id}">${money(r.price)}</td>
-      <td>${money(r.owes)}</td><td>${money(r.paid)}</td><td>${money(r.balance)}</td>`;
-    (r.balance>0?els.outBody:els.paidBody).appendChild(tr);
-  });
-  // update stats
-  els.stLoss.textContent=stats.losses.toLocaleString();
-  els.stOwed.textContent=money(stats.owes);
-  els.stAuto.textContent=money(stats.auto);
-  els.stMan.textContent=money(stats.man);
-  els.stOut.textContent=money(stats.out);
-}
+                    <div class="endpoint-group">
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getHunting</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get hunting locations, available prey, success rates, and hunting equipment requirements.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getHunting', 'GET')">Try it out</button>
+                            </div>
+                        </div>
 
-// ---------- toggle fill all checkboxes ---------- //
-let fillAllFlag = false;
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getScavenge</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Retrieve scavenging opportunities, loot tables, location safety levels, and resource availability.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getScavenge', 'GET')">Try it out</button>
+                            </div>
+                        </div>
 
-// ---------- modified button handler ---------- //
-els.btnPaid.onclick=()=>{
-  const store=j(PAY);
-  if(fillAllFlag){
-    // Fill all checkboxes
-    document.querySelectorAll('#tblOut tbody input[type=checkbox]').forEach(cb => {
-      cb.checked = true;
-    });
-    // Do NOT reset toggle, so next click will mark checked boxes
-  } else {
-    // Mark only checked checkboxes
-    document.querySelectorAll('#tblOut tbody input[type=checkbox]:checked').forEach(cb => {
-      const id = cb.dataset.id;
-      const bal = +cb.closest('tr').lastElementChild.textContent.replace(/[^\d-]/g,'');
-      store[id] = (store[id] || 0) + bal;
-    });
-    // Reset toggle so next click will fill all
-    fillAllFlag = false;
-  }
-  j(PAY, store);
-  refresh();
-};
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getExplore</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get exploration data including new areas to discover, exploration risks, and potential discoveries.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getExplore', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
-/* ---------- existing code ---------- */
-els.save.onclick=()=>{j(CFG,{key:els.myKey.value.trim(),price:+els.price.value});
-                      els.cfgBox.removeAttribute('open'); refresh();};
-[els.outBody,els.paidBody].forEach(tb=>tb.addEventListener('click',e=>{
-  if(!e.target.classList.contains('price'))return;
-  const id=e.target.dataset.id,current=+e.target.textContent.replace(/[^\d]/g,'');
-  const val=prompt('New price per loss:',current);
-  if(val===null)return; const num=+val;
-  if(isNaN(num)||num<0){alert('Invalid number');return;}
-  const map=j(PRC); map[id]=num; j(PRC,map); refresh();
-}));
-els.tabOut.onclick=()=>switchTab(true); els.tabPaid.onclick=()=>switchTab(false);
-function switchTab(out){els.tabOut.classList.toggle('active',out);
-  els.tabPaid.classList.toggle('active',!out);
-  $('tblOut').style.display=out?'':'none';
-  $('tblPaid').style.display=out?'none':'';}
-(async()=>{const cfg=j(CFG); if(cfg.key)els.myKey.value=cfg.key; if(cfg.price)els.price.value=cfg.price; if(cfg.key)els.cfgBox.removeAttribute('open'); refresh();})();
-async function refresh(){try{render(await build())}catch(e){els.stat.textContent='Error: '+e;console.error(e)}} 
-</script>
+                <!-- Character Section -->
+                <section id="character" class="section">
+                    <h1>Character</h1>
+                    <p>Manage character progression, skills, and abilities.</p>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getSkills</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Retrieve the complete skill tree, skill descriptions, prerequisites, and progression paths.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getSkills', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getPerks</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get available perks, their effects, unlock requirements, and perk categories.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getPerks', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getStats</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Access character statistics, attributes, health, stamina, and other vital information.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getStats', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- World Section -->
+                <section id="world" class="section">
+                    <h1>World</h1>
+                    <p>Explore the game world, locations, and environmental data.</p>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getLocation</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get current location data, nearby points of interest, safety levels, and available actions.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getLocation', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getStronghold</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Retrieve stronghold information including defenses, upgrades, capacity, and resource storage.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getStronghold', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getSettings</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Access game settings, configuration options, and player preferences.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getSettings', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/loadItems</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Load item database including all weapons, armor, consumables, and crafting materials.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/loadItems', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Faction Section -->
+                <section id="faction" class="section">
+                    <h1>Factions</h1>
+                    <p>Manage faction relationships, membership, and social interactions.</p>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getFaction</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get information about all available factions, their ideologies, benefits, and requirements.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getFaction', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getFactionMembers</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Retrieve faction membership lists, member ranks, and contribution statistics.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getFactionMembers', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getUsers</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Access user directory, player profiles, online status, and public statistics.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getUsers', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Combat Section -->
+                <section id="combat" class="section">
+                    <h1>Combat</h1>
+                    <p>Combat system data, fight mechanics, and battle logs.</p>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getFight</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get current fight data, combat options, enemy information, and battle state.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getFight', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getFightLog</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Retrieve combat history, battle outcomes, damage dealt/received, and fight statistics.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getFightLog', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Communication Section -->
+                <section id="communication" class="section">
+                    <h1>Communication</h1>
+                    <p>Radio systems and communication networks in the wasteland.</p>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getRadioTower</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get list of all radio towers, their status, broadcast range, and available channels.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getRadioTower', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getRadioTower?id=${radioId}</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get detailed information about a specific radio tower by ID, including broadcasts and signal strength.
+                                </div>
+                                
+                                <h3>Query Parameters</h3>
+                                <div class="parameter-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Parameter</th>
+                                                <th>Type</th>
+                                                <th>Required</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="param-name">id</span></td>
+                                                <td><span class="param-type">string/integer</span></td>
+                                                <td><span class="param-required">required</span></td>
+                                                <td>Radio tower ID to retrieve</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <button class="try-it-btn" onclick="tryEndpoint('/getRadioTower?id=1', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Trading Section -->
+                <section id="trading" class="section">
+                    <h1>Trading</h1>
+                    <p>Economy, markets, and trading systems.</p>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getTrades</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get available trades, trade offers, and player-to-player trading opportunities.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getTrades', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getMarket</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Access market data, item prices, supply and demand, and trading volume statistics.
+                                </div>
+                                <button class="try-it-btn" onclick="tryEndpoint('/getMarket', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getStore?store_id=junk</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Get store inventory, item availability, prices, and store-specific information.
+                                </div>
+                                
+                                <h3>Query Parameters</h3>
+                                <div class="parameter-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Parameter</th>
+                                                <th>Type</th>
+                                                <th>Required</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="param-name">store_id</span></td>
+                                                <td><span class="param-type">string</span></td>
+                                                <td><span class="param-required">required</span></td>
+                                                <td>Store identifier (e.g., "junk", "weapons", "medical")</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <button class="try-it-btn" onclick="tryEndpoint('/getStore?store_id=junk', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Crafting Section -->
+                <section id="crafting" class="section">
+                    <h1>Crafting</h1>
+                    <p>Item crafting, recipes, and manufacturing systems.</p>
+
+                    <div class="endpoint-group">
+                        <div class="endpoint">
+                            <div class="endpoint-header">
+                                <span class="method">GET</span>
+                                <span class="endpoint-url">/getRecipes?type=${type}</span>
+                            </div>
+                            <div class="endpoint-body">
+                                <div class="endpoint-description">
+                                    Retrieve crafting recipes filtered by type, including required materials, crafting time, and success rates.
+                                </div>
+                                
+                                <h3>Query Parameters</h3>
+                                <div class="parameter-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Parameter</th>
+                                                <th>Type</th>
+                                                <th>Required</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><span class="param-name">type</span></td>
+                                                <td><span class="param-type">string</span></td>
+                                                <td><span class="param-required">required</span></td>
+                                                <td>Recipe category (e.g., "weapons", "armor", "consumables", "tools")</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="code-block">
+                                    <div class="code-header">Example Response</div>
+                                    <div class="code-content">
+                                        <pre><code class="language-json">{
+  "recipes": [
+    {
+      "id": 1,
+      "name": "Makeshift Knife",
+      "type": "weapons",
+      "materials": [
+        {
+          "item": "scrap_metal",
+          "quantity": 2
+        },
+        {
+          "item": "cloth",
+          "quantity": 1
+        }
+      ],
+      "crafting_time": 300,
+      "success_rate": 85,
+      "skill_required": {
+        "crafting": 1
+      }
+    }
+  ]
+}</code></pre>
+                                    </div>
+                                </div>
+
+                                <button class="try-it-btn" onclick="tryEndpoint('/getRecipes?type=weapons', 'GET')">Try it out</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Adding New Endpoints Section -->
+                <section id="add-endpoint" class="section">
+                    <h1>Adding New Endpoints</h1>
+                    <p>This documentation is designed to be easily extensible. To add new endpoints, follow this simple pattern:</p>
+
+                    <div class="alert info">
+                        <strong>Easy to Extend:</strong> Copy the endpoint template below and modify the details for your new endpoint.
+                    </div>
+
+                    <h2>Endpoint Template</h2>
+                    <p>Use this template to add new endpoints to any section:</p>
+
+                    <div class="code-block">
+                        <div class="code-header">HTML Template</div>
+                        <div class="code-content">
+                            <pre><code class="language-html">&lt;div class="endpoint"&gt;
+    &lt;div class="endpoint-header"&gt;
+        &lt;span class="method"&gt;GET&lt;/span&gt;
+        &lt;span class="endpoint-url"&gt;/your-new-endpoint&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class="endpoint-body"&gt;
+        &lt;div class="endpoint-description"&gt;
+            Description of what this endpoint does and what data it returns.
+        &lt;/div&gt;
+        
+        &lt;!-- Add parameters table if needed --&gt;
+        &lt;h3&gt;Query Parameters&lt;/h3&gt;
+        &lt;div class="parameter-table"&gt;
+            &lt;table&gt;
+                &lt;thead&gt;
+                    &lt;tr&gt;
+                        &lt;th&gt;Parameter&lt;/th&gt;
+                        &lt;th&gt;Type&lt;/th&gt;
+                        &lt;th&gt;Required&lt;/th&gt;
+                        &lt;th&gt;Description&lt;/th&gt;
+                    &lt;/tr&gt;
+                &lt;/thead&gt;
+                &lt;tbody&gt;
+                    &lt;tr&gt;
+                        &lt;td&gt;&lt;span class="param-name"&gt;param_name&lt;/span&gt;&lt;/td&gt;
+                        &lt;td&gt;&lt;span class="param-type"&gt;string&lt;/span&gt;&lt;/td&gt;
+                        &lt;td&gt;&lt;span class="param-required"&gt;required&lt;/span&gt;&lt;/td&gt;
+                        &lt;td&gt;Parameter description&lt;/td&gt;
+                    &lt;/tr&gt;
+                &lt;/tbody&gt;
+            &lt;/table&gt;
+        &lt;/div&gt;
+
+        &lt;!-- Add example response if helpful --&gt;
+        &lt;div class="code-block"&gt;
+            &lt;div class="code-header"&gt;Example Response&lt;/div&gt;
+            &lt;div class="code-content"&gt;
+                &lt;pre&gt;&lt;code class="language-json"&gt;{
+  "example": "response data"
+}&lt;/code&gt;&lt;/pre&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;button class="try-it-btn" onclick="tryEndpoint('/your-new-endpoint', 'GET')"&gt;Try it out&lt;/button&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+                        </div>
+                    </div>
+
+                    <h2>Adding New Sections</h2>
+                    <p>To add a completely new section:</p>
+                    <ol>
+                        <li><strong>Add navigation link:</strong> Insert a new &lt;a&gt; tag in the sidebar navigation</li>
+                        <li><strong>Create section:</strong> Add a new &lt;section&gt; with unique ID</li>
+                        <li><strong>Add endpoints:</strong> Use the endpoint template above for each new endpoint</li>
+                    </ol>
+
+                    <div class="endpoint-template">
+                        <h3>🔧 Ready to Add More Endpoints</h3>
+                        <p>The documentation structure is in place and ready for expansion. Simply follow the patterns above to add new endpoints as the API grows.</p>
+                        <button class="add-endpoint-btn" onclick="showAddEndpointExample()">
+                            Show Example: Adding a New Endpoint
+                        </button>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/plugins/autoloader/prism-autoloader.min.js"></script>
+    
+    <script>
+        // Navigation functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.section');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links and sections
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    sections.forEach(s => s.classList.remove('active'));
+                    
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Show corresponding section
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetSection = document.getElementById(targetId);
+                    if (targetSection) {
+                        targetSection.classList.add('active');
+                    }
+                });
+            });
+            
+            // Mobile responsiveness
+            function checkMobile() {
+                const isMobile = window.innerWidth <= 768;
+                const mobileBtn = document.querySelector('.mobile-menu-btn');
+                
+                if (isMobile) {
+                    mobileBtn.style.display = 'block';
+                } else {
+                    mobileBtn.style.display = 'none';
+                    document.getElementById('sidebar').classList.remove('open');
+                }
+            }
+            
+            checkMobile();
+            window.addEventListener('resize', checkMobile);
+        });
+        
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+        
+        function tryEndpoint(endpoint, method) {
+            const fullUrl = `https://api.zed.city${endpoint}`;
+            alert(`🧟 Testing Zed City API Endpoint\n\n${method} ${fullUrl}\n\nThis would open an interactive API tester. In a real implementation, this would:\n• Make the actual API call to ${fullUrl}\n• Display the JSON response\n• Show response headers and status code\n• Allow parameter modification`);
+        }
+
+        function showAddEndpointExample() {
+            alert(`📚 Adding New Endpoints Example\n\n1. Add to navigation:\n<a href="#inventory" class="nav-link">Inventory</a>\n\n2. Create section:\n<section id="inventory" class="section">\n  <h1>Inventory</h1>\n  <!-- Add endpoints here -->\n</section>\n\n3. Use endpoint template for each new API endpoint\n\nThe documentation will automatically handle navigation and styling!`);
+        }
+
+        // Smooth scrolling for better UX
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
