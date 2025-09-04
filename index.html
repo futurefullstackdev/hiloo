@@ -24,7 +24,7 @@
       margin: 2rem auto;
       padding: 1rem;
     }
-    .search-bar {
+    .search-bar, .form-input {
       width: 100%;
       padding: 0.5rem;
       margin-bottom: 1rem;
@@ -74,7 +74,24 @@
       max-height: 300px;
       overflow: auto;
       margin-top: 0.5rem;
-      display: none; /* Hidden until toggled */
+      display: none;
+    }
+    .add-api {
+      background: #33334d;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-bottom: 2rem;
+    }
+    textarea {
+      width: 100%;
+      height: 300px;
+      background: #111;
+      color: #0f0;
+      font-family: monospace;
+      padding: 0.5rem;
+      border-radius: 10px;
+      margin-top: 1rem;
+      display: none;
     }
   </style>
 </head>
@@ -83,13 +100,22 @@
   <div class="container">
     <input type="text" class="search-bar" placeholder="Search endpoints..." oninput="filterEndpoints(event)" />
 
+    <div class="add-api">
+      <h3>Add New API</h3>
+      <input type="text" class="form-input" id="newName" placeholder="API Name" />
+      <input type="text" class="form-input" id="newUrl" placeholder="API URL" />
+      <button onclick="addAPI()">Add API</button>
+      <button onclick="generateCode()">Generate Full Code</button>
+      <textarea id="fullCode"></textarea>
+    </div>
+
     <div id="endpoints"></div>
   </div>
 
   <script>
     const proxy = "https://corsproxy.io/?";
 
-    const endpoints = [
+    let endpoints = [
       { name: "Get Quests", url: "https://api.zed.city/getQuests" },
       { name: "Get Hunting", url: "https://api.zed.city/getHunting" },
       { name: "Get Scavenge", url: "https://api.zed.city/getScavenge" },
@@ -136,7 +162,7 @@
     async function testAPI(name) {
       const url = document.getElementById(`url-${name}`).value;
       const resultBox = document.getElementById(`result-${name}`);
-      resultBox.style.display = "block"; // ensure visible when testing
+      resultBox.style.display = "block";
       resultBox.textContent = "Loading...";
       try {
         const res = await fetch(proxy + url);
@@ -162,6 +188,24 @@
         ep.name.toLowerCase().includes(term) || ep.url.toLowerCase().includes(term)
       );
       renderEndpoints(filtered);
+    }
+
+    function addAPI() {
+      const name = document.getElementById("newName").value.trim();
+      const url = document.getElementById("newUrl").value.trim();
+      if (!name || !url) return alert("Please enter both name and URL.");
+      endpoints.push({ name, url });
+      renderEndpoints(endpoints);
+      document.getElementById("newName").value = "";
+      document.getElementById("newUrl").value = "";
+    }
+
+    function generateCode() {
+      const fullHTML = document.documentElement.outerHTML;
+      const textarea = document.getElementById("fullCode");
+      textarea.value = "<!DOCTYPE html>\n" + fullHTML;
+      textarea.style.display = "block";
+      textarea.scrollIntoView();
     }
 
     renderEndpoints(endpoints);
