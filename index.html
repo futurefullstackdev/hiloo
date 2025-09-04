@@ -1,206 +1,170 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Zed.City API Explorer</title>
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    pre { white-space: pre-wrap; word-wrap: break-word; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #1e1e2f;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background: #292940;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 1rem;
+    }
+    .search-bar {
+      width: 100%;
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
+    }
+    .endpoint {
+      background: #2d2d44;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+    .endpoint h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.2rem;
+      color: #4fd1c5;
+    }
+    .endpoint input {
+      width: 70%;
+      padding: 0.3rem;
+      border-radius: 6px;
+      border: none;
+      margin-right: 0.5rem;
+    }
+    button {
+      padding: 0.4rem 0.7rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #4fd1c5;
+      color: #000;
+      font-weight: bold;
+      margin-right: 0.3rem;
+    }
+    button:hover {
+      background: #38b2ac;
+    }
+    .result-container {
+      margin-top: 0.5rem;
+    }
+    pre {
+      background: #111;
+      padding: 0.5rem;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow: auto;
+      margin-top: 0.5rem;
+      display: none; /* Hidden until toggled */
+    }
   </style>
 </head>
-<body class="bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 min-h-screen">
-  <div class="max-w-6xl mx-auto p-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-3xl font-extrabold text-indigo-700 dark:text-indigo-400">
-        Zed.City API Explorer
-      </h1>
-      <button id="themeToggle" class="p-2 border rounded-lg">
-        🌙
-      </button>
-    </div>
+<body>
+  <header>Zed.City API Explorer</header>
+  <div class="container">
+    <input type="text" class="search-bar" placeholder="Search endpoints..." oninput="filterEndpoints(event)" />
 
-    <!-- Search -->
-    <input id="searchInput" type="text" placeholder="🔍 Search endpoints..."
-      class="w-full mb-6 p-2 border-2 border-indigo-300 rounded-lg focus:border-indigo-500 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100" />
-
-    <!-- Sidebar + Content -->
-    <div class="grid grid-cols-12 gap-6">
-      <!-- Sidebar -->
-      <aside class="col-span-3">
-        <ul id="sidebar" class="space-y-2"></ul>
-      </aside>
-
-      <!-- Main -->
-      <main id="content" class="col-span-9 space-y-6"></main>
-    </div>
+    <div id="endpoints"></div>
   </div>
 
   <script>
+    const proxy = "https://corsproxy.io/?";
+
     const endpoints = [
-      {
-        category: "Quests & Exploration",
-        items: [
-          { name: "Get Quests", url: "https://api.zed.city/getQuests", method: "GET", description: "Fetch available quests.", params: [] },
-          { name: "Get Explore", url: "https://api.zed.city/getExplore", method: "GET", description: "Explore locations.", params: [] },
-          { name: "Get Location", url: "https://api.zed.city/getLocation", method: "GET", description: "Get current location info.", params: [] },
-        ],
-      },
-      {
-        category: "Combat",
-        items: [
-          { name: "Get Fight", url: "https://api.zed.city/getFight", method: "GET", description: "Start a fight.", params: [] },
-          { name: "Get Fight Log", url: "https://api.zed.city/getFightLog", method: "GET", description: "Retrieve fight history.", params: [] },
-        ],
-      },
-      {
-        category: "World",
-        items: [
-          { name: "Get Hunting", url: "https://api.zed.city/getHunting", method: "GET", description: "Hunting-related data.", params: [] },
-          { name: "Get Scavenge", url: "https://api.zed.city/getScavenge", method: "GET", description: "Scavenging resources.", params: [] },
-          { name: "Get Radio Tower", url: "https://api.zed.city/getRadioTower", method: "GET", description: "Fetch radio towers.", params: [{ name: "id", placeholder: "Enter radioId" }] },
-        ],
-      },
-      {
-        category: "Player Data",
-        items: [
-          { name: "Get Stats", url: "https://api.zed.city/getStats", method: "GET", description: "Character stats.", params: [] },
-          { name: "Get Skills", url: "https://api.zed.city/getSkills", method: "GET", description: "List skills.", params: [] },
-          { name: "Get Perks", url: "https://api.zed.city/getPerks", method: "GET", description: "Fetch perks.", params: [] },
-        ],
-      },
-      {
-        category: "Economy",
-        items: [
-          { name: "Get Trades", url: "https://api.zed.city/getTrades", method: "GET", description: "Trade information.", params: [] },
-          { name: "Get Market", url: "https://api.zed.city/getMarket", method: "GET", description: "Market listings.", params: [] },
-          { name: "Get Recipes", url: "https://api.zed.city/getRecipes", method: "GET", description: "Fetch recipes by type.", params: [{ name: "type", placeholder: "Enter recipe type" }] },
-          { name: "Get Store", url: "https://api.zed.city/getStore", method: "GET", description: "Store data.", params: [{ name: "store_id", placeholder: "Enter store ID (e.g. junk)" }] },
-        ],
-      },
-      {
-        category: "Factions",
-        items: [
-          { name: "Get Faction", url: "https://api.zed.city/getFaction", method: "GET", description: "Faction details.", params: [] },
-          { name: "Get Faction Members", url: "https://api.zed.city/getFactionMembers", method: "GET", description: "List faction members.", params: [] },
-        ],
-      },
-      {
-        category: "Other",
-        items: [
-          { name: "Get Settings", url: "https://api.zed.city/getSettings", method: "GET", description: "Game settings.", params: [] },
-          { name: "Get Stronghold", url: "https://api.zed.city/getStronghold", method: "GET", description: "Stronghold info.", params: [] },
-          { name: "Load Items", url: "https://api.zed.city/loadItems", method: "GET", description: "Load items data.", params: [] },
-          { name: "Get Users", url: "https://api.zed.city/getUsers", method: "GET", description: "All users list.", params: [] },
-        ],
-      },
+      { name: "Get Quests", url: "https://api.zed.city/getQuests" },
+      { name: "Get Hunting", url: "https://api.zed.city/getHunting" },
+      { name: "Get Scavenge", url: "https://api.zed.city/getScavenge" },
+      { name: "Get Skills", url: "https://api.zed.city/getSkills" },
+      { name: "Get Perks", url: "https://api.zed.city/getPerks" },
+      { name: "Get Trades", url: "https://api.zed.city/getTrades" },
+      { name: "Get Settings", url: "https://api.zed.city/getSettings" },
+      { name: "Get Explore", url: "https://api.zed.city/getExplore" },
+      { name: "Get Location", url: "https://api.zed.city/getLocation" },
+      { name: "Get Market", url: "https://api.zed.city/getMarket" },
+      { name: "Get Recipes", url: "https://api.zed.city/getRecipes?type=${type}" },
+      { name: "Get Stronghold", url: "https://api.zed.city/getStronghold" },
+      { name: "Get Stats", url: "https://api.zed.city/getStats" },
+      { name: "Get RadioTower by ID", url: "https://api.zed.city/getRadioTower?id=${radioId}" },
+      { name: "Get RadioTower", url: "https://api.zed.city/getRadioTower" },
+      { name: "Load Items", url: "https://api.zed.city/loadItems" },
+      { name: "Get Faction", url: "https://api.zed.city/getFaction" },
+      { name: "Get Users", url: "https://api.zed.city/getUsers" },
+      { name: "Get Faction Members", url: "https://api.zed.city/getFactionMembers" },
+      { name: "Get Store", url: "https://api.zed.city/getStore?store_id=junk" },
+      { name: "Get Fight", url: "https://api.zed.city/getFight" },
+      { name: "Get Fight Log", url: "https://api.zed.city/getFightLog" }
     ];
 
-    const sidebar = document.getElementById("sidebar");
-    const content = document.getElementById("content");
-    const searchInput = document.getElementById("searchInput");
-
-    // Render sidebar
-    endpoints.forEach((group, i) => {
-      const li = document.createElement("li");
-      li.innerHTML = `<button class="w-full text-left p-2 rounded hover:bg-indigo-100 dark:hover:bg-indigo-800" data-index="${i}">${group.category}</button>`;
-      sidebar.appendChild(li);
-    });
-
-    // Render endpoint cards
-    function renderContent(filter = "") {
-      content.innerHTML = "";
-      endpoints.forEach((group, gi) => {
-        const section = document.createElement("div");
-        section.innerHTML = `<h2 class="text-2xl font-bold mb-2 text-indigo-600 dark:text-indigo-400">${group.category}</h2>`;
-        group.items
-          .filter((ep) =>
-            ep.name.toLowerCase().includes(filter.toLowerCase()) ||
-            ep.description.toLowerCase().includes(filter.toLowerCase())
-          )
-          .forEach((ep) => {
-            const card = document.createElement("div");
-            card.className = "p-4 mb-4 border rounded-lg shadow dark:bg-gray-800";
-            card.innerHTML = `
-              <div class="flex justify-between items-center">
-                <h3 class="text-lg font-semibold">${ep.name}</h3>
-                <button class="copyUrl p-1 border rounded text-sm">Copy URL</button>
-              </div>
-              <p class="text-sm mb-2">${ep.description}</p>
-              <code class="text-xs block mb-2">${ep.url}</code>
-              ${ep.params.map(p => `<input data-param="${p.name}" placeholder="${p.placeholder}" class="paramInput w-full p-2 mb-2 border rounded dark:bg-gray-700">`).join("")}
-              <button class="testApi bg-indigo-600 text-white px-3 py-1 rounded">Test API</button>
-              <pre class="response mt-2 p-2 bg-gray-100 dark:bg-gray-900 rounded max-h-60 overflow-auto"></pre>
-            `;
-            section.appendChild(card);
-
-            // Copy
-            card.querySelector(".copyUrl").addEventListener("click", () => {
-              navigator.clipboard.writeText(ep.url);
-            });
-
-            // Test API
-            card.querySelector(".testApi").addEventListener("click", async () => {
-              const params = {};
-              card.querySelectorAll(".paramInput").forEach(input => {
-                if (input.value) params[input.dataset.param] = input.value;
-              });
-              let url = ep.url;
-              if (Object.keys(params).length) {
-                url += "?" + new URLSearchParams(params).toString();
-              }
-              const resEl = card.querySelector(".response");
-              resEl.textContent = "Loading...";
-              try {
-                const res = await fetch(url);
-                const data = await res.json();
-                resEl.textContent = JSON.stringify(data, null, 2);
-              } catch (err) {
-                resEl.textContent = "Error: " + err.message;
-              }
-            });
-          });
-        if (section.children.length > 1) content.appendChild(section);
+    function renderEndpoints(list) {
+      const container = document.getElementById("endpoints");
+      container.innerHTML = "";
+      list.forEach(ep => {
+        const div = document.createElement("div");
+        div.className = "endpoint";
+        div.innerHTML = `
+          <h3>${ep.name}</h3>
+          <input type="text" value="${ep.url}" id="url-${ep.name}" />
+          <button onclick="testAPI('${ep.name}')">Test API</button>
+          <button onclick="toggleResult('${ep.name}')">Show Result</button>
+          <div class="result-container">
+            <pre id="result-${ep.name}"></pre>
+          </div>
+        `;
+        container.appendChild(div);
       });
     }
 
-    renderContent();
-
-    // Sidebar filter
-    sidebar.querySelectorAll("button").forEach((btn, i) => {
-      btn.addEventListener("click", () => {
-        content.innerHTML = "";
-        renderContent();
-        document.querySelectorAll("h2")[i].scrollIntoView({ behavior: "smooth" });
-      });
-    });
-
-    // Search filter
-    searchInput.addEventListener("input", (e) => {
-      renderContent(e.target.value);
-    });
-
-    // Dark mode toggle
-    const themeToggle = document.getElementById("themeToggle");
-    function setTheme(theme) {
-      if (theme === "dark") {
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("theme", "dark");
-        themeToggle.textContent = "☀️";
-      } else {
-        document.documentElement.classList.remove("dark");
-        localStorage.setItem("theme", "light");
-        themeToggle.textContent = "🌙";
+    async function testAPI(name) {
+      const url = document.getElementById(`url-${name}`).value;
+      const resultBox = document.getElementById(`result-${name}`);
+      resultBox.style.display = "block"; // ensure visible when testing
+      resultBox.textContent = "Loading...";
+      try {
+        const res = await fetch(proxy + url);
+        const data = await res.json();
+        resultBox.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        resultBox.textContent = "Error: " + err;
       }
     }
-    setTheme(localStorage.getItem("theme") || "light");
-    themeToggle.addEventListener("click", () => {
-      setTheme(document.documentElement.classList.contains("dark") ? "light" : "dark");
-    });
+
+    function toggleResult(name) {
+      const resultBox = document.getElementById(`result-${name}`);
+      if (resultBox.style.display === "none" || resultBox.style.display === "") {
+        resultBox.style.display = "block";
+      } else {
+        resultBox.style.display = "none";
+      }
+    }
+
+    function filterEndpoints(e) {
+      const term = e.target.value.toLowerCase();
+      const filtered = endpoints.filter(ep =>
+        ep.name.toLowerCase().includes(term) || ep.url.toLowerCase().includes(term)
+      );
+      renderEndpoints(filtered);
+    }
+
+    renderEndpoints(endpoints);
   </script>
 </body>
 </html>
